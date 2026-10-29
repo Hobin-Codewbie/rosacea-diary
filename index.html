@@ -41,6 +41,18 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .wrap{max-width:560px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
 header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);margin:0 calc(-1*max(16px,env(safe-area-inset-left,0px)));padding:12px max(16px,env(safe-area-inset-left,0px)) 0}
 h1{font-family:var(--display);font-size:20px;margin:0}
+.titlebar{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.ver{border:0;background:var(--bg);color:var(--muted);border-radius:999px;padding:3px 10px;font:500 11.5px var(--body);cursor:pointer;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ver b{color:var(--calm);font-weight:700}
+.news{background:var(--calm-soft);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:13.5px}
+.news .hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.news .hd b{color:var(--calm)}
+.news ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:2px}
+.news .x{border:0;background:none;color:var(--muted);font:500 13px var(--body);cursor:pointer;padding:2px 4px}
+.log{display:flex;flex-direction:column;gap:12px}
+.log .item h3{margin:0 0 4px;font-size:14px}
+.log .item h3 small{color:var(--muted);font-weight:400;margin-left:6px}
+.log .item ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--fg)}
 .tabs{display:flex;margin-top:6px}
 .tabs button{flex:1;border:0;background:none;color:var(--muted);font:500 13.5px var(--body);padding:10px 0;border-bottom:2.5px solid transparent;cursor:pointer;white-space:nowrap}
 .tabs button[aria-selected="true"]{color:var(--rose);border-color:var(--rose)}
@@ -193,7 +205,7 @@ td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right}
 
 <div class="wrap">
   <header>
-    <h1>주사 피부 다이어리</h1>
+    <div class="titlebar"><h1>주사 피부 다이어리</h1><button class="ver" id="verBtn" type="button"></button></div>
     <div class="tabs" role="tablist">
       <button role="tab" id="tab-daily" aria-selected="true" data-view="daily">매일 다이어리</button>
       <button role="tab" id="tab-flare" aria-selected="false" data-view="flare">올라왔을 때</button>
@@ -204,6 +216,7 @@ td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right}
 
   <!-- DAILY -->
   <section class="view" id="view-daily">
+    <div class="news" id="news" hidden></div>
     <div class="datebar">
       <button id="prevDay" type="button" aria-label="전날">‹</button>
       <input type="date" id="dateInput" aria-label="날짜">
@@ -342,6 +355,12 @@ td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right}
     </div>
   </section>
 
+  <!-- CHANGELOG -->
+  <section class="view" id="view-log" hidden>
+    <div class="card"><h2>업데이트 내역</h2><p class="note">새 버전은 앱을 완전히 닫았다가 다시 열면 적용돼요. 기록은 그대로 남아요.</p><div class="log" id="logList"></div></div>
+    <button class="ghost" id="logBack" type="button">닫기</button>
+  </section>
+
   <!-- HISTORY -->
   <section class="view" id="view-hist" hidden>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="ghost" id="csvBtn" type="button">CSV로 내보내기</button><button class="ghost" id="bkBtn" type="button">전체 백업</button><button class="ghost" id="rsBtn" type="button">백업 불러오기</button><input type="file" id="rsInput" accept="application/json,.json" hidden></div>
@@ -354,6 +373,15 @@ td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right}
 <div class="lightbox" id="lightbox" hidden><img id="lbImg" alt="피부 사진"></div>
 
 <script>
+/* ---------- 버전·업데이트 내역 (새로 고칠 때 맨 위에 추가) ---------- */
+const CHANGELOG = [
+  ["1.3","10/29",["끼니를 탭으로 하나씩 보기 (지금 시간 끼니 자동 선택)","주의 음식·음료를 끼니 맨 위로","누르면 자동으로 ‘먹음’ 처리","맨 위에 버전·바뀐 점 표시"]],
+  ["1.2","10/29",["교대근무 반영: 주간·야간·휴무 선택","근무에 맞춰 끼니 이름·시각 변경","야간 근무는 다음 날 오전까지 같은 날로 기록","수면 시간, 방진복 착용 시간","분석에 ‘근무별 비교’ 추가"]],
+  ["1.1","10/29",["끼니별 식사 기록","피부 점수 없이 중간 저장","올라왔을 때 직전 끼니 자동 연결","분석에 ‘식사 후 올라오기까지’ 추가"]],
+  ["1.0","10/29",["첫 버전: 매일 다이어리, 올라왔을 때, 분석, 기록","사진 저장, 구미 날씨 자동 입력, 백업"]]
+];
+const APP_VERSION = CHANGELOG[0][0];
+
 /* ---------- definitions ---------- */
 const SCALE = [[0,"없음","--s0"],[1,"약간","--s1"],[2,"중간","--s2"],[3,"심함","--s3"]];
 const SYMPTOMS = ["화끈거림","따가움","뾰루지·구진","건조·각질","부기","눈 충혈·뻑뻑함"];
@@ -439,7 +467,7 @@ async function rDel(col,id){ try{ await idbDel(col,id); }catch(e){} }
 /* ---------- nav ---------- */
 function show(v){
   document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected",b.dataset.view===v));
-  ["daily","flare","trend","hist"].forEach(n=>$("#view-"+n).hidden=n!==v);
+  ["daily","flare","trend","hist","log"].forEach(n=>$("#view-"+n).hidden=n!==v);
   if(v==="trend") renderTrend(); if(v==="hist") renderHist(); if(v==="flare"&&S.f) renderFlare();
   window.scrollTo(0,0);
 }
@@ -867,6 +895,20 @@ $("#fSave").onclick=saveFlare;
 $("#fWhen").onchange=()=>renderFlare(); $("#fNew").onclick=newFlare;
 $("#tab-flare").addEventListener("click",()=>{ if(S.f&&S.f.isNew&&S.f.redness===null){ S.f.ts=Date.now(); $("#fWhen").value=localDT(S.f.ts); renderFlare(); } });
 $("#csvBtn").onclick=exportCsv;
+function renderVersion(){
+  const [v,date,items]=CHANGELOG[0];
+  $("#verBtn").innerHTML=`<b>v${v}</b> · ${date} 업데이트`;
+  let seen=null; try{ seen=localStorage.getItem("rosacea-seen-version"); }catch(e){}
+  const n=$("#news");
+  if(seen!==v){ n.hidden=false;
+    n.innerHTML=`<div class="hd"><b>v${v} 업데이트 · 바뀐 점</b><button class="x" id="newsX" type="button">닫기 ✕</button></div><ul>${items.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`;
+    $("#newsX").onclick=()=>{ try{ localStorage.setItem("rosacea-seen-version",v); }catch(e){} n.hidden=true; };
+  } else n.hidden=true;
+  $("#logList").innerHTML=CHANGELOG.map(([v2,d2,it])=>`<div class="item"><h3>v${v2}<small>${d2}</small></h3><ul>${it.map(x=>`<li>${esc(x)}</li>`).join("")}</ul></div>`).join("");
+}
+$("#verBtn").onclick=()=>{ document.querySelectorAll(".tabs button").forEach(b=>b.setAttribute("aria-selected","false")); ["daily","flare","trend","hist","log"].forEach(n=>$("#view-"+n).hidden=n!=="log"); window.scrollTo(0,0); };
+$("#logBack").onclick=()=>show("daily");
+renderVersion();
 $("#bkBtn").onclick=exportBackup;
 $("#rsBtn").onclick=()=>$("#rsInput").click();
 $("#rsInput").onchange=e=>{ const f=e.target.files[0]; e.target.value=""; if(f) importBackup(f); };
