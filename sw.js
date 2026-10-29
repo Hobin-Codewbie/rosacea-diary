@@ -1,5 +1,5 @@
 // 오프라인에서도 앱이 열리도록 앱 파일을 캐시해요. 기록 데이터는 IndexedDB에 따로 저장돼요.
-const CACHE = "rosacea-diary-v5";
+const CACHE = "rosacea-diary-v6";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
