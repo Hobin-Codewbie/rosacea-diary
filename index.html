@@ -120,6 +120,11 @@ input[type=date],input[type=datetime-local],.txt,select{min-width:0;height:40px;
 .progress{display:flex;gap:6px;justify-content:center;flex-wrap:wrap}
 .progress span{font-size:11.5px;border-radius:999px;padding:2px 9px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
 .progress span.ok{background:var(--calm-soft);color:var(--calm);border-color:transparent}
+.shiftrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.shiftrow .pick b{font-size:15px}
+.shiftset{display:flex;flex-direction:column;gap:8px;font-size:13px;background:var(--bg);border-radius:10px;padding:10px}
+.shiftset label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.shiftset input[type=time]{height:34px;font-size:14px;padding:0 8px}
 .lastmeal{background:var(--calm-soft);border-radius:12px;padding:10px 12px;font-size:13.5px;display:flex;flex-direction:column;gap:8px}
 .lastmeal b{color:var(--calm)}
 textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:400 14px var(--body);padding:10px;resize:vertical}
@@ -194,6 +199,15 @@ td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right}
     </div>
     <div class="status" id="dStatus"></div>
     <div class="progress" id="dProgress"></div>
+
+    <div class="sec">
+      <h2><span class="no">0</span>근무·수면 <span class="en">SHIFT &amp; SLEEP</span></h2>
+      <div class="shiftrow" id="shiftBtns"></div>
+      <p class="hint" id="shiftInfo"></p>
+      <div class="shiftset" id="shiftSet" hidden></div>
+      <div><p class="h3">자고 일어난 수면 시간</p><div class="chips" id="sleepBtns"></div></div>
+      <div id="suitWrap"><p class="h3">방진복·후드·마스크 착용 시간</p><div class="chips" id="suitBtns"></div></div>
+    </div>
 
     <div class="sec">
       <h2><span class="no">1</span>오늘 피부 상태 <span class="en">ROSACEA TODAY</span></h2>
@@ -301,6 +315,11 @@ td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right}
       <div class="rank" id="rankList"></div>
     </div>
     <div class="card">
+      <h2>근무별 비교</h2>
+      <p class="note">근무 형태별 평균 붉어짐과 하루 평균 올라온 횟수예요. ‘야간 다음 날’은 야간 근무 바로 다음 기록일이에요.</p>
+      <div class="tbl" id="shiftCmp"></div>
+    </div>
+    <div class="card">
       <h2>식사 후 올라오기까지</h2>
       <p class="note">올라온 기록마다 그 직전 끼니를 찾아, 먹고 몇 시간 만에 올라왔는지 모았어요.</p>
       <div id="mealGap"></div>
@@ -327,7 +346,27 @@ td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right}
 const SCALE = [[0,"없음","--s0"],[1,"약간","--s1"],[2,"중간","--s2"],[3,"심함","--s3"]];
 const SYMPTOMS = ["화끈거림","따가움","뾰루지·구진","건조·각질","부기","눈 충혈·뻑뻑함"];
 const WEATHER = [["sunny","맑음·햇빛","Sunny"],["windy","바람","Windy"],["cloudy","흐림","Cloudy"],["humid","습함","Humid"],["hot","더움","Hot"],["cold","추움","Cold"],["mild","온화함","Mild"],["dry","건조함","Dry"]];
-const MEALS = [["breakfast","아침","08:00"],["lunch","점심","12:30"],["dinner","저녁","18:30"],["snack","간식·야식","15:30"]];
+const MEALS = [["breakfast","끼니 1","08:00"],["lunch","끼니 2","12:30"],["dinner","끼니 3","18:30"],["snack","간식·야식","15:30"]];
+const SHIFTS = [["day","주간","☀"],["night","야간","☾"],["off","휴무","·"]];
+const SHIFT_LABEL = {day:"주간",night:"야간",off:"휴무"};
+const SLEEP = ["4시간 이하","5시간","6시간","7시간","8시간 이상"];
+const SUIT = ["안 입음","4시간 미만","4~8시간","8~12시간"];
+const SET_KEY="rosacea-shift-times";
+function shiftTimes(){ try{ const o=JSON.parse(localStorage.getItem(SET_KEY)||"null"); if(o&&o.dayStart) return o; }catch(e){} return {dayStart:"07:00",dayEnd:"19:00",nightStart:"19:00",nightEnd:"07:00"}; }
+function saveShiftTimes(o){ try{ localStorage.setItem(SET_KEY,JSON.stringify(o)); }catch(e){} }
+const toMin=t=>{ const [h,m]=t.split(":").map(Number); return h*60+m; };
+const toHM=m=>{ m=((m%1440)+1440)%1440; return `${pad(Math.floor(m/60))}:${pad(m%60)}`; };
+// 근무별 끼니 이름·기본 시각
+function mealPlan(shift){
+  const t=shiftTimes();
+  if(shift==="day"){ const a=toMin(t.dayStart), b=toMin(t.dayEnd); return {breakfast:["출근 전",toHM(a-60)],lunch:["근무 중 식사",toHM(a+300)],dinner:["퇴근 후",toHM(b+60)],snack:["간식",toHM(a+510)]}; }
+  if(shift==="night"){ const a=toMin(t.nightStart), b=toMin(t.nightEnd); return {breakfast:["출근 전",toHM(a-90)],lunch:["근무 중 야식",toHM(a+330)],dinner:["퇴근 후",toHM(b+60)],snack:["근무 중 간식",toHM(a+510)]}; }
+  return {breakfast:["아침","09:00"],lunch:["점심","13:00"],dinner:["저녁","19:00"],snack:["간식·야식","16:00"]};
+}
+// 기록일 + 끼니 시각 → 실제 시각 (야간은 정오 전 시각을 다음 날로)
+function mealTs(day,shift,time){ const [y,mo,dd]=day.split("-").map(Number), [h,mi]=time.split(":").map(Number); let add=0; if(shift==="night"&&h<12) add=1; else if(h<5) add=1; return new Date(y,mo-1,dd+add,h,mi).getTime(); }
+// 어떤 시각이 속하는 기록일 (야간 근무 다음 날 오전까지는 전날 기록)
+function recordDayOf(ts){ const d=new Date(ts), day=ymd(d), prev=addDays(day,-1), h=d.getHours(); const p=S.days[prev]; if(h<12&&p&&p.shift==="night") return prev; if(h<5) return prev; return day; }
 const MEAL_LABEL = Object.fromEntries(MEALS.map(m=>[m[0],m[1]]));
 const QUICK = ["맵거나 매운 양념","뜨거운 음식·국물","뜨거운 커피","뜨거운 차"];
 const ALCOHOL = ["레드와인","맥주","소주","양주(위스키·버번·진·보드카)","샴페인"];
@@ -335,7 +374,7 @@ const DUR = ["~30분","30분~1시간","1~2시간","2시간+"];
 // [label, common-trigger flag]
 const DRINKS = [["레드와인",1],["맥주",1],["소주",1],["양주(위스키·버번·진·보드카)",1],["샴페인",1],["뜨거운 커피",1],["뜨거운 차",1],["핫초코",1],["따뜻한 사이다·주스",0]];
 const FOODS = [["맵거나 매운 양념",1],["뜨거운 음식·국물",1],["히스타민 많은 음식(발효·숙성)",0],["간",0],["요거트",0],["사워크림",0],["치즈(코티지 제외)",0],["초콜릿",0],["바닐라",0],["간장",0],["효모 추출물",0],["식초",0],["가지",0],["아보카도",0],["시금치",0],["콩깍지류(완두·강낭콩 등)",0],["감귤류",0],["토마토",0],["바나나",0],["자두",0],["건포도·무화과",0]];
-const ACTS = [["격한 운동",1],["무거운 거 들기",0],["사우나·뜨거운 목욕",1],["더운 실내·히터",1],["몸 과열",0],["스트레스",1],["불안·긴장",0],["화남·당황",0],["방진복·마스크 오래 착용",0]];
+const ACTS = [["격한 운동",1],["무거운 거 들기",0],["사우나·뜨거운 목욕",1],["더운 실내·히터",1],["몸 과열",0],["스트레스",1],["불안·긴장",0],["화남·당황",0],["클린룸 건조함",0],["근무 중 얼굴 땀·열감",0]];
 const SKIN = [["새 화장품 사용",0],["따갑거나 붉어진 제품",1],["알코올·향료 든 제품",0],["헤어스프레이",0],["각질제거·스크럽",0],["레티놀·산(AHA/BHA)",0],["뜨거운 물 세안",0]];
 const BODY = [["수면 부족",0],["생리 기간·전",0],["감기·기침",0],["카페인 끊음",0],["스테로이드 연고 사용",1],["혈관확장제 복용",0]];
 const FLARE = [
@@ -394,7 +433,7 @@ function show(v){
 }
 
 /* ---------- DAILY ---------- */
-function blankDay(){ return { meals:{}, redness:null, itch:null, symptoms:[], photos:[], weather:{}, sunscreen:null, drinks:[], foods:[], foodsOther:[], acts:[], skin:[], cosmetics:[], body:[], meds:[], memo:"" }; }
+function blankDay(){ return { shift:null, sleep:null, suit:null, meals:{}, redness:null, itch:null, symptoms:[], photos:[], weather:{}, sunscreen:null, drinks:[], foods:[], foodsOther:[], acts:[], skin:[], cosmetics:[], body:[], meds:[], memo:"" }; }
 function loadDay(date){
   S.date=date; const e=S.days[date];
   S.d = Object.assign(blankDay(), e?JSON.parse(JSON.stringify(e)):{}, {confirmDel:false, cosForm:false});
@@ -414,7 +453,9 @@ function applyAutoWeather(){
 function renderDaily(){
   const d=S.d, e=S.days[S.date], rr=renderDaily;
   $("#dStatus").innerHTML = e ? `${fmtDay(S.date)} · <b>${fmtStamp(e.savedAt)} 저장됨</b>` : `${fmtDay(S.date)} · 아직 기록 없음`;
-  const pg=[...MEALS.map(([k,l])=>[l,d.meals[k].state!=null]),["피부 점수",d.redness!=null&&d.itch!=null]];
+  const plan=mealPlan(d.shift);
+  const pg=[["근무",d.shift!=null],...MEALS.map(([k])=>[plan[k][0],d.meals[k].state!=null]),["피부 점수",d.redness!=null&&d.itch!=null]];
+  renderShift();
   $("#dProgress").innerHTML=pg.map(([l,ok])=>`<span class="${ok?"ok":""}">${ok?"✓ ":""}${l}</span>`).join("");
   // 1
   scale($("#sRed"),d.redness,v=>{ d.redness=v; rr(); });
@@ -466,11 +507,26 @@ function renderDaily(){
   const s=$("#dSave"); const ready=d.redness!==null&&d.itch!==null; s.disabled=false;
   s.textContent = ready ? (e ? "수정 저장" : "저장") : "중간 저장 (피부 점수는 저녁에)";
 }
+function renderShift(){
+  const d=S.d, rr=renderDaily, t=shiftTimes();
+  const el=$("#shiftBtns"); el.innerHTML="";
+  SHIFTS.forEach(([k,l,ic])=>{ const b=document.createElement("button"); b.type="button"; b.className="pick"; b.style.setProperty("--c",k==="night"?"var(--calm)":k==="day"?"var(--warn)":"var(--muted)");
+    b.innerHTML=`<b>${ic}</b>${l}`; b.setAttribute("aria-pressed",d.shift===k); b.onclick=()=>{ d.shift=d.shift===k?null:k; rr(); }; el.appendChild(b); });
+  const info=d.shift==="day"?`주간 ${t.dayStart}–${t.dayEnd}`:d.shift==="night"?`야간 ${t.nightStart}–다음 날 ${t.nightEnd} · 퇴근 후 식사·홍조까지 이 날짜에 기록돼요`:d.shift==="off"?"휴무일":"근무를 고르면 끼니 이름과 시각이 맞춰져요";
+  $("#shiftInfo").innerHTML=`${info} · <button type="button" class="more" id="shiftEdit" style="display:inline">근무 시간 바꾸기</button>`;
+  $("#shiftEdit").onclick=()=>{ d.showSet=!d.showSet; rr(); };
+  const set=$("#shiftSet"); set.hidden=!d.showSet;
+  if(d.showSet){ set.innerHTML=`<label>주간 <input type="time" id="tDS" value="${t.dayStart}"> ~ <input type="time" id="tDE" value="${t.dayEnd}"></label><label>야간 <input type="time" id="tNS" value="${t.nightStart}"> ~ <input type="time" id="tNE" value="${t.nightEnd}"></label><button type="button" class="ghost" id="tSave">시간 저장</button>`;
+    $("#tSave").onclick=()=>{ saveShiftTimes({dayStart:$("#tDS").value||"07:00",dayEnd:$("#tDE").value||"19:00",nightStart:$("#tNS").value||"19:00",nightEnd:$("#tNE").value||"07:00"}); d.showSet=false; rr(); toast("근무 시간을 바꿨어요"); }; }
+  const sl=$("#sleepBtns"); sl.innerHTML=""; SLEEP.forEach(x=>sl.appendChild(chip(x,d.sleep===x,()=>{ d.sleep=d.sleep===x?null:x; rr(); })));
+  $("#suitWrap").hidden=d.shift==="off";
+  const su=$("#suitBtns"); su.innerHTML=""; SUIT.forEach(x=>su.appendChild(chip(x,d.suit===x,()=>{ d.suit=d.suit===x?null:x; rr(); })));
+}
 function mealDefaultTime(k){
-  const def=MEALS.find(m=>m[0]===k)[2];
-  if(S.date!==today()) return def;
-  const now=new Date(), [h,mi]=def.split(":").map(Number), diff=(now.getHours()*60+now.getMinutes())-(h*60+mi);
-  return Math.abs(diff)<=180 ? `${pad(now.getHours())}:${pad(now.getMinutes())}` : def;
+  const def=mealPlan(S.d.shift)[k][1];
+  if(S.date!==recordDayOf(Date.now())) return def;
+  const now=new Date(), [h,mi]=def.split(":").map(Number); let diff=Math.abs((now.getHours()*60+now.getMinutes())-(h*60+mi)); diff=Math.min(diff,1440-diff);
+  return diff<=180 ? `${pad(now.getHours())}:${pad(now.getMinutes())}` : def;
 }
 function pastItems(k){
   const m=new Map();
@@ -479,7 +535,9 @@ function pastItems(k){
 }
 function renderMeals(){
   const wrap=$("#meals"); wrap.innerHTML=""; const d=S.d;
-  MEALS.forEach(([k,label])=>{
+  const plan=mealPlan(d.shift);
+  MEALS.forEach(([k])=>{
+    const label=plan[k][0];
     const m=d.meals[k], open=d.open[k]||{};
     const box=document.createElement("div"); box.className="meal"+(m.state==="skip"?" skip":"");
     const head=document.createElement("div"); head.className="meal-head";
@@ -487,7 +545,7 @@ function renderMeals(){
     if(m.state==="ate"){ const t=document.createElement("input"); t.type="time"; t.id="time-"+k; t.value=m.time; t.setAttribute("aria-label",label+" 먹은 시각"); t.onchange=e=>{ m.time=e.target.value; }; head.appendChild(t); }
     const yn=document.createElement("div"); yn.className="yn";
     yn.appendChild(chip("먹음",m.state==="ate",()=>{ if(m.state==="ate"){ m.state=null; } else { m.state="ate"; if(!m.time) m.time=mealDefaultTime(k); } renderDaily(); }));
-    yn.appendChild(chip(k==="snack"?"없음":"거름",m.state==="skip",()=>{ m.state=m.state==="skip"?null:"skip"; renderDaily(); }));
+    yn.appendChild(chip(k==="snack"?"없음":"안 먹음",m.state==="skip",()=>{ m.state=m.state==="skip"?null:"skip"; renderDaily(); }));
     head.appendChild(yn); box.appendChild(head);
     if(m.state==="ate"){
       // what was eaten
@@ -551,6 +609,9 @@ function flatten(d){
   const t=[];
   Object.keys(d.weather).forEach(k=>t.push("날씨: "+WX_LABEL[k]));
   if(d.sunscreen===false) t.push("자외선 차단제 안 바름");
+  if(d.shift) t.push("근무: "+SHIFT_LABEL[d.shift]);
+  if(d.sleep==="4시간 이하"||d.sleep==="5시간") t.push("수면 5시간 이하");
+  if(d.suit&&d.suit!=="안 입음") t.push("방진복 "+d.suit);
   (d.drinks||[]).forEach(x=>t.push(x)); (d.foods||[]).forEach(x=>t.push(x)); (d.foodsOther||[]).forEach(x=>t.push(x));
   Object.values(d.meals||{}).forEach(m=>{ if(m.state==="ate"){ m.items.forEach(x=>t.push(x)); m.risk.forEach(x=>t.push(x)); m.drinks.forEach(x=>t.push(ALCOHOL.includes(x)?x:x)); if(m.drinks.some(x=>ALCOHOL.includes(x))) t.push("술(전체)"); } });
   d.acts.forEach(x=>t.push(x)); d.skin.forEach(x=>t.push(x));
@@ -560,7 +621,7 @@ function flatten(d){
 async function saveDaily(){
   const d=S.d;
   const e={ date:S.date, redness:d.redness, itch:d.itch, symptoms:d.symptoms, photos:d.photos, weather:d.weather, sunscreen:d.sunscreen,
-    meals:d.meals, drinks:d.drinks, foods:d.foods, foodsOther:d.foodsOther, acts:d.acts, skin:d.skin, cosmetics:d.cosmetics, body:d.body, meds:d.meds,
+    shift:d.shift, sleep:d.sleep, suit:d.suit, meals:d.meals, drinks:d.drinks, foods:d.foods, foodsOther:d.foodsOther, acts:d.acts, skin:d.skin, cosmetics:d.cosmetics, body:d.body, meds:d.meds,
     memo:$("#dMemo").value.trim(), savedAt:Date.now() };
   e.triggers=[...new Set(flatten(e))]; e.score=e.redness;
   S.days[S.date]=e; lsSave(); S.d.confirmDel=false; renderDaily();
@@ -607,7 +668,7 @@ function renderFlare(){
     box.hidden=false; box.innerHTML=`<div>직전 끼니: <b>${lm.l} ${lm.time}</b> (${gap})<br><span style="color:var(--muted)"></span></div>`;
     box.querySelector("span").textContent=tags.length?tags.join(", "):"메뉴 기록 없음";
     if(tags.length){ const bt=document.createElement("button"); bt.type="button"; bt.className="ghost"; bt.textContent=added?"직전 끼니 내용 추가됨 ✓":"직전 끼니 내용 같이 기록";
-      bt.onclick=()=>{ tags.forEach(t=>{ if(!f.triggers.includes(t)) f.triggers.push(t); }); if(!f.triggers.includes(`${lm.l} 먹고 ${gap}`)) f.mealRef={meal:lm.k,time:lm.time,gapMin:Math.round(h*60)}; rr(); }; box.appendChild(bt); }
+      bt.onclick=()=>{ tags.forEach(t=>{ if(!f.triggers.includes(t)) f.triggers.push(t); }); if(!f.triggers.includes(`${lm.l} 먹고 ${gap}`)) f.mealRef={meal:lm.k,label:lm.l,time:lm.time,gapMin:Math.round(h*60)}; rr(); }; box.appendChild(bt); }
   } else { box.hidden=true; box.innerHTML=""; }
   scale($("#fRed"),f.redness,v=>{ f.redness=v; rr(); });
   scale($("#fItch"),f.itch,v=>{ f.itch=v; rr(); });
@@ -627,7 +688,7 @@ function renderFlare(){
 function addFlareCustom(){ const v=$("#fCustomInput").value.trim(); if(!v) return; v.split(/[,，]/).map(x=>x.trim()).filter(Boolean).forEach(x=>{ if(!S.f.triggers.includes(x)) S.f.triggers.push(x); }); $("#fCustomInput").value=""; renderFlare(); }
 async function saveFlare(){
   const f=S.f, wv=$("#fWhen").value, ts=wv?new Date(wv).getTime():f.ts;
-  const e={ id:f.id, ts, day:ymd(new Date(ts)), mealRef:f.mealRef||null, redness:f.redness, itch:f.itch??0, severity:Math.max(1,f.redness), areas:f.areas, triggers:f.triggers, memo:$("#fMemo").value.trim(), savedAt:Date.now() };
+  const e={ id:f.id, ts, day:recordDayOf(ts), mealRef:f.mealRef||null, redness:f.redness, itch:f.itch??0, severity:Math.max(1,f.redness), areas:f.areas, triggers:f.triggers, memo:$("#fMemo").value.trim(), savedAt:Date.now() };
   S.flares[e.id]=e; lsSave(); newFlare();
   toast((await rSet("flares",e.id,e)) ? `${fmtHM(ts)} 올라온 기록 저장했어요` : "이 기기에만 저장됐어요");
 }
@@ -655,7 +716,7 @@ function renderTrend(){
   const ls=n<=14?2:n<=30?5:15; days.forEach((d,i)=>{ if(i%ls===0||i===n-1){ const [,m,dd]=d.split("-").map(Number); s+=`<text x="${cx(i)}" y="${H-8}" text-anchor="middle">${m}/${dd}</text>`; } });
   s+=`</svg><div class="legend"><span><i style="background:var(--calm)"></i>붉어짐</span><span><i style="background:var(--warn)"></i>가려움</span><span><i style="background:var(--rose);opacity:.4;height:10px;width:10px"></i>올라온 횟수</span></div>`;
   $("#chart").innerHTML = (rec.length||fc) ? s : `<div class="empty">이 기간에 기록이 없어요.<br>‘매일 다이어리’를 저장하면 여기에 그려져요.</div>`;
-  renderSuspects(); renderRank(); renderMealGap(); renderHours();
+  renderSuspects(); renderShiftCmp(); renderRank(); renderMealGap(); renderHours();
 }
 function renderSuspects(){
   const all=Object.values(S.days).filter(e=>e.redness!=null);
@@ -677,9 +738,17 @@ function renderRank(){
   rows.forEach(([t,c])=>{ const p=Math.round(c/all.length*100), r=document.createElement("div"); r.className="rk";
     r.innerHTML=`<span class="nm"></span><span class="track"><span class="fill" style="width:${p}%"></span></span><span class="v">${c}회 · ${p}%</span>`; r.querySelector(".nm").textContent=t; el.appendChild(r); });
 }
-function mealsOf(day){ const e=S.days[day]; if(!e||!e.meals) return []; return MEALS.map(([k,l])=>({k,l,...e.meals[k]})).filter(m=>m.state==="ate"&&m.time).map(m=>{ const [h,mi]=m.time.split(":").map(Number); const [y,mo,dd]=day.split("-").map(Number); return {...m,ts:new Date(y,mo-1,dd,h,mi).getTime()}; }); }
+function mealsOf(day){ const e=S.days[day]; if(!e||!e.meals) return []; const plan=mealPlan(e.shift); return MEALS.map(([k])=>({k,l:plan[k][0],...e.meals[k]})).filter(m=>m&&m.state==="ate"&&m.time).map(m=>({...m,ts:mealTs(day,e.shift,m.time)})); }
 function lastMealBefore(ts){
   const day=ymd(new Date(ts)); const c=[...mealsOf(day),...mealsOf(addDays(day,-1))].filter(m=>m.ts<=ts).sort((a,b)=>b.ts-a.ts); return c[0]||null;
+}
+function renderShiftCmp(){
+  const by=flaresByDay(); const days=Object.values(S.days).filter(e=>e.shift);
+  if(days.length<3){ $("#shiftCmp").innerHTML=`<div class="empty">근무를 고른 기록이 3일 이상이면 보여요. (현재 ${days.length}일)</div>`; return; }
+  const groups=[["주간",e=>e.shift==="day"],["야간",e=>e.shift==="night"],["야간 다음 날",e=>{ const p=S.days[addDays(e.date,-1)]; return p&&p.shift==="night"&&e.shift!=="night"; }],["휴무",e=>e.shift==="off"]];
+  const rows=groups.map(([n,fn])=>{ const g=days.filter(fn); if(!g.length) return null; const sc=g.filter(e=>e.redness!=null);
+    return `<tr><td>${n}</td><td>${g.length}</td><td>${sc.length?(sc.reduce((a,e)=>a+e.redness,0)/sc.length).toFixed(1):"–"}</td><td>${(g.reduce((a,e)=>a+(by[e.date]||[]).length,0)/g.length).toFixed(1)}</td></tr>`; }).filter(Boolean);
+  $("#shiftCmp").innerHTML=`<table><thead><tr><th>근무</th><th>일수</th><th>평균 붉어짐</th><th>하루 올라온 횟수</th></tr></thead><tbody>${rows.join("")}</tbody></table>`;
 }
 function renderMealGap(){
   const fl=Object.values(S.flares); const pairs=fl.map(f=>({f,m:lastMealBefore(f.ts)})).filter(p=>p.m&&(p.f.ts-p.m.ts)<12*3600e3);
@@ -708,7 +777,7 @@ function renderHist(){
     const h=document.createElement("div"); h.className="hday"; h.textContent=fmtDay(d); hl.appendChild(h);
     const e=S.days[d];
     if(e){ const b=document.createElement("button"); b.type="button"; b.className="hrow";
-      b.innerHTML=`<span class="k" style="color:var(--calm)">매일</span><span style="min-width:0"><span class="badge" style="background:var(${SCALE[e.redness??0][2]})">붉어짐 ${e.redness??"-"}</span><span class="badge" style="background:var(${SCALE[e.itch??0][2]})">가려움 ${e.itch??"-"}</span><br><span class="t"></span><span class="hthumbs"></span></span>`;
+      b.innerHTML=`<span class="k" style="color:var(--calm)">${e.shift?SHIFT_LABEL[e.shift]:"매일"}</span><span style="min-width:0">${e.redness==null?`<span class="badge" style="background:var(--muted)">피부 점수 미입력</span>`:`<span class="badge" style="background:var(${SCALE[e.redness][2]})">붉어짐 ${e.redness}</span><span class="badge" style="background:var(${SCALE[e.itch??0][2]})">가려움 ${e.itch??"-"}</span>`}<br><span class="t"></span><span class="hthumbs"></span></span>`;
       b.querySelector(".t").textContent=(e.triggers||[]).length?e.triggers.join(", "):"체크한 요인 없음";
       (e.photos||[]).slice(0,4).forEach(id=>{ const im=document.createElement("img"); setImg(im,id); im.alt="피부 사진"; im.loading="lazy"; b.querySelector(".hthumbs").appendChild(im); });
       b.onclick=()=>{ loadDay(d); show("daily"); }; hl.appendChild(b); }
@@ -723,16 +792,16 @@ function renderHist(){
 /* ---------- CSV ---------- */
 async function exportCsv(){
   const q=v=>`"${String(v??"").replace(/"/g,'""')}"`;
-  const mealTxt=(e,k)=>{ const m=(e.meals||{})[k]; if(!m||!m.state) return ""; if(m.state==="skip") return "거름"; return [m.time,[...m.items,...m.risk,...m.drinks].join("/")].filter(Boolean).join(" "); };
-  const H=["구분","날짜","시각","붉어짐","가려움","증상·부위","날씨(노출시간)","자차","아침","점심","저녁","간식·야식","활동","스킨케어","새 화장품","몸·치료","요인(올라옴)","메모","저장시각"];
+  const mealTxt=(e,k)=>{ const m=(e.meals||{})[k]; if(!m||!m.state) return ""; if(m.state==="skip") return "안 먹음"; return [m.time,[...m.items,...m.risk,...m.drinks].join("/")].filter(Boolean).join(" "); };
+  const H=["구분","날짜","근무","수면","방진복","시각","붉어짐","가려움","증상·부위","날씨(노출시간)","자차","끼니1(출근 전/아침)","끼니2(근무 중/점심)","끼니3(퇴근 후/저녁)","간식·야식","활동","스킨케어","새 화장품","몸·치료","요인(올라옴)","메모","저장시각"];
   const rows=[H.map(q).join(",")];
-  Object.values(S.days).sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>rows.push(["매일",e.date,"",e.redness,e.itch,(e.symptoms||[]).join("/"),
+  Object.values(S.days).sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>rows.push(["매일",e.date,e.shift?SHIFT_LABEL[e.shift]:"",e.sleep||"",e.suit||"","",e.redness,e.itch,(e.symptoms||[]).join("/"),
     Object.entries(e.weather||{}).map(([k,v])=>WX_LABEL[k]+(v?`(${v})`:"")).join("/"), e.sunscreen==null?"":e.sunscreen?"바름":"안 바름",
     mealTxt(e,"breakfast"),mealTxt(e,"lunch"),mealTxt(e,"dinner"),[mealTxt(e,"snack"),...(e.drinks||[]),...(e.foods||[]),...(e.foodsOther||[])].filter(Boolean).join("/"),
     (e.acts||[]).join("/"),(e.skin||[]).join("/"),(e.cosmetics||[]).map(c=>`${c.brand} ${c.name}(${c.type})${c.reaction?"[반응]":""}`).join("/"),
     [...(e.body||[]),...(e.meds||[])].join("/"),"",e.memo,new Date(e.savedAt).toLocaleString("ko-KR")].map(q).join(",")));
-  Object.values(S.flares).sort((a,b)=>a.ts-b.ts).forEach(f=>rows.push(["올라옴",f.day,fmtHM(f.ts),f.redness??f.severity,f.itch??"",f.areas.join("/"),"","","","","","","","","","",
-    f.triggers.join("/")+(f.mealRef?` (${MEAL_LABEL[f.mealRef.meal]} 먹고 ${f.mealRef.gapMin}분 뒤)`:""),f.memo,new Date(f.savedAt).toLocaleString("ko-KR")].map(q).join(",")));
+  Object.values(S.flares).sort((a,b)=>a.ts-b.ts).forEach(f=>rows.push(["올라옴",f.day,"","","",fmtHM(f.ts),f.redness??f.severity,f.itch??"",f.areas.join("/"),"","","","","","","","","","",
+    f.triggers.join("/")+(f.mealRef?` (${f.mealRef.label||MEAL_LABEL[f.mealRef.meal]} 먹고 ${f.mealRef.gapMin}분 뒤)`:""),f.memo,new Date(f.savedAt).toLocaleString("ko-KR")].map(q).join(",")));
   const data="\uFEFF"+rows.join("\n");
   await saveFile(`주사다이어리_${today()}.csv`, new Blob([data],{type:"text/csv"}));
 }
@@ -783,7 +852,7 @@ $("#rangeBtns").onclick=e=>{ const b=e.target.closest("button"); if(!b) return; 
 S.assets=true;
 (async()=>{
   try{ S.days=await idbAll("days"); S.flares=await idbAll("flares"); S.weather=await idbAll("weather"); }catch(e){ toast("저장소를 열 수 없어요. 사파리 개인정보 보호 모드인지 확인해 주세요"); }
-  loadDay(new Date().getHours()<5?addDays(today(),-1):today()); newFlare();
+  loadDay(recordDayOf(Date.now())); newFlare();
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
 })();
 if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
