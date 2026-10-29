@@ -17,7 +17,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <style>
 :root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-body{margin:0;-webkit-text-size-adjust:100%}
+body{margin:0;-webkit-text-size-adjust:100%;overflow-x:hidden}
+input,select,textarea{font-size:16px!important}
 img{max-width:100%}
 [hidden]{display:none!important}
 /* Layout: phone app, 4 tabs — 매일 다이어리 (Rosacea Diary sections 1–7) · 올라왔을 때 · 분석 · 기록 */
@@ -81,7 +82,7 @@ input[type=date],input[type=datetime-local],.txt,select{min-width:0;height:40px;
 .chip.custom{border-style:dashed}
 .chip .risk{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--warn);margin-right:5px;vertical-align:2px}
 .addrow{display:flex;gap:8px}
-.addrow .txt{flex:1;font-size:14px;height:38px}
+.addrow .txt{flex:1;font-size:16px;height:40px}
 .btn-dark{border:0;border-radius:10px;background:var(--fg);color:var(--bg);padding:0 14px;font:500 13px var(--body);cursor:pointer;height:38px}
 .ghost{border:1px solid var(--line);background:var(--surface);color:var(--fg);border-radius:10px;padding:7px 12px;font:500 13px var(--body);cursor:pointer}
 .danger{border:0;background:none;color:var(--s3);font:500 13px var(--body);cursor:pointer;padding:6px 0}
@@ -115,14 +116,14 @@ input[type=date],input[type=datetime-local],.txt,select{min-width:0;height:40px;
 .cos .x{border:0;background:none;color:var(--muted);font-size:18px;cursor:pointer}
 .cos-form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .cos-form .full{grid-column:1/-1}
-.cos-form .txt,.cos-form select{width:100%;font-size:14px}
+.cos-form .txt,.cos-form select{width:100%;font-size:16px}
 .react{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--fg)}
 
 .meal{border-top:1px solid var(--line);padding-top:12px;display:flex;flex-direction:column;gap:10px}
 .meal:first-of-type{border-top:0;padding-top:0}
 .meal-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .meal-head .nm{font-weight:700;font-size:15px;min-width:4.6em}
-.meal-head input[type=time]{height:34px;font-size:14px;padding:0 8px;width:6.8em}
+.meal-head input[type=time]{height:36px;font-size:16px;padding:0 8px;width:6.8em}
 .meal-head .yn{margin-left:auto}
 .meal-head .done{font-size:12px;color:var(--calm)}
 .meal.skip .nm{color:var(--muted)}
@@ -136,7 +137,7 @@ input[type=date],input[type=datetime-local],.txt,select{min-width:0;height:40px;
 .shiftrow .pick b{font-size:15px}
 .shiftset{display:flex;flex-direction:column;gap:8px;font-size:13px;background:var(--bg);border-radius:10px;padding:10px}
 .shiftset label{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.shiftset input[type=time]{height:34px;font-size:14px;padding:0 8px}
+.shiftset input[type=time]{height:36px;font-size:16px;padding:0 8px}
 .seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--bg);border-radius:12px;padding:4px}
 .seg button{border:0;background:none;border-radius:9px;padding:7px 2px 6px;font:500 12.5px var(--body);color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:1px;line-height:1.25}
 .seg button small{font-size:10.5px;font-weight:400;font-variant-numeric:tabular-nums;min-height:1.2em}
@@ -145,13 +146,13 @@ input[type=date],input[type=datetime-local],.txt,select{min-width:0;height:40px;
 .seg button.skip small{color:var(--muted)}
 .panel{display:flex;flex-direction:column;gap:12px}
 .panel-top{display:flex;align-items:center;gap:8px}
-.panel-top input[type=time]{height:36px;font-size:15px;padding:0 8px;width:7.2em}
+.panel-top input[type=time]{height:38px;font-size:16px;padding:0 8px;width:7.2em}
 .panel-top .sp{flex:1}
 .panel .lbl{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.04em;margin:0 0 6px}
 .panel .skipnote{color:var(--muted);font-size:13.5px;text-align:center;padding:10px 0}
 .lastmeal{background:var(--calm-soft);border-radius:12px;padding:10px 12px;font-size:13.5px;display:flex;flex-direction:column;gap:8px}
 .lastmeal b{color:var(--calm)}
-textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:400 14px var(--body);padding:10px;resize:vertical}
+textarea{width:100%;min-height:64px;border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);font:400 14px var(--body);padding:10px;resize:vertical;font-size:16px}
 .save{position:sticky;bottom:calc(10px + env(safe-area-inset-bottom,0px));border:0;border-radius:14px;background:var(--calm);color:#fff;font:700 16px var(--body);padding:15px;cursor:pointer;box-shadow:0 6px 18px color-mix(in srgb,var(--calm) 25%,transparent);z-index:3}
 .save.rose{background:var(--rose);box-shadow:0 6px 18px color-mix(in srgb,var(--rose) 25%,transparent)}
 .save:disabled{opacity:.5}
@@ -375,6 +376,7 @@ td{padding:8px 4px;border-bottom:1px solid var(--line);text-align:right}
 <script>
 /* ---------- 버전·업데이트 내역 (새로 고칠 때 맨 위에 추가) ---------- */
 const CHANGELOG = [
+  ["1.5","10/29",["입력할 때 화면이 확대되던 문제 해결","앱을 다시 열 때 새 버전을 자동으로 확인해서 바로 적용"]],
   ["1.4","10/29",["주의 음식·음료는 접어두고 ‘주의 음식·음료 체크’를 눌러야 펼쳐지게","먹은 메뉴에는 그 끼니에 입력한 것만 표시 (지난 메뉴는 입력할 때 자동완성으로)"]],
   ["1.3","10/29",["끼니를 탭으로 하나씩 보기 (지금 시간 끼니 자동 선택)","주의 음식·음료를 끼니 맨 위로","누르면 자동으로 ‘먹음’ 처리","맨 위에 버전·바뀐 점 표시"]],
   ["1.2","10/29",["교대근무 반영: 주간·야간·휴무 선택","근무에 맞춰 끼니 이름·시각 변경","야간 근무는 다음 날 오전까지 같은 날로 기록","수면 시간, 방진복 착용 시간","분석에 ‘근무별 비교’ 추가"]],
@@ -926,7 +928,14 @@ S.assets=true;
   loadDay(recordDayOf(Date.now())); newFlare();
   try{ if(navigator.storage&&navigator.storage.persist) navigator.storage.persist(); }catch(e){}
 })();
-if("serviceWorker" in navigator) window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+if("serviceWorker" in navigator){
+  let reloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(reloaded) return; reloaded=true; location.reload(); });
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>{
+    reg.update().catch(()=>{});
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden) reg.update().catch(()=>{}); });
+  }).catch(()=>{}));
+}
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden&&S.date){ ensureWeather(S.date); } });
 </script>
 

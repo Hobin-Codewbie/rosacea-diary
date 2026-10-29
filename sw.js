@@ -1,9 +1,9 @@
 // 오프라인에서도 앱이 열리도록 앱 파일을 캐시해요. 기록 데이터는 IndexedDB에 따로 저장돼요.
-const CACHE = "rosacea-diary-v6";
+const CACHE = "rosacea-diary-v7";
 const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -13,12 +13,11 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
   if (e.request.method !== "GET") return;
-  // 날씨 API는 항상 네트워크로
-  if (url.hostname === "api.open-meteo.com") return;
-  // 앱 파일: 네트워크 우선(업데이트 반영), 실패하면 캐시
+  if (url.hostname === "api.open-meteo.com") return; // 날씨는 항상 네트워크
   if (url.origin === location.origin) {
+    // 앱 파일: 항상 서버에 새 버전 확인(브라우저 캐시 건너뜀), 오프라인이면 캐시
     e.respondWith(
-      fetch(e.request).then(r => {
+      fetch(e.request, { cache: "no-cache" }).then(r => {
         const copy = r.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy));
         return r;
